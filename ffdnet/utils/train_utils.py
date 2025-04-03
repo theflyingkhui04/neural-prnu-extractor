@@ -145,7 +145,8 @@ def resume_training(args, model, optimizer):
     if os.path.isfile(resumef):
       checkpoint = torch.load(resumef)
       print("> Resuming previous training")
-      model.load_state_dict(checkpoint['state_dict'])
+      from ffdnet.compatibility import load_state_dict
+      load_state_dict(model, checkpoint['state_dict'])
       optimizer.load_state_dict(checkpoint['optimizer'])
       new_epoch = args.epochs
       args = checkpoint['args']

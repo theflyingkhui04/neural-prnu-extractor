@@ -1,25 +1,3 @@
-""" train.py
-Trains a FFDNet model
-
-By default, the training starts with a learning rate equal to 1e-3 (--lr).
-Up until this point, the orthogonalization technique
-described in the FFDNet paper is performed (--no_orthog to set it off).
-
-Copyright (C) 2018, Matias Tassano <matias.tassano@parisdescartes.fr>
-
-This program is free software: you can use, modify and/or
-redistribute it under the terms of the GNU General Public
-License as published by the Free Software Foundation, either
-version 3 of the License, or (at your option) any later
-version. You should have received a copy of this license along
-this program. If not, see <http://www.gnu.org/licenses/>.
-
-Later authors:
-
-- Simone Alghisi (simone.alghisi-1@studenti.unitn.it)
-- Samuele Bortolotti (samuele.bortolotti@studenti.unitn.it)
-- Massimo Rizzoli (massimo.rizzoli@studenti.unitn.it)
-"""
 import os
 import numpy as np
 import torch
@@ -34,9 +12,12 @@ from ffdnet.utils.train_utils import load_dataset_and_dataloader, create_model, 
 
 # try to import the autocast command
 try:
-  from torch import autocast
-except ImportError:
-  print('torch.autocast is not supported in {}'.format(torch.__version__))
+    with autocast(device_type='cuda'):
+        pred = model(imgn, stdn_var)
+        loss = compute_loss(criterion, pred, noise, imgn).cpu()
+except NameError:
+    pred = model(imgn, stdn_var)
+    loss = compute_loss(criterion, pred, noise, imgn).cpu()
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
@@ -62,10 +43,9 @@ def train(args):
     valdbf: h5py file containing the images for validating the net 
     gpu_fraction: if it is specified, it tries to set the upperbound GPU limit (only if set_process_memory_fraction is implemented), otherwise it only notifies the user
   """
-  try:
-    torch.cuda.set_per_process_memory_fraction(args.gpu_fraction)
-  except NameError:
-    print('Torch version {} does not support torch.cuda.set_per_process_memory_fraction, no GPU memory limit will be set'.format(torch.__version__))
+  # Import và sử dụng compatibility layer
+  from ffdnet.compatibility import set_memory_allocation
+  set_memory_allocation(args.gpu_fraction)
 
 	# Performs the main training loop
 

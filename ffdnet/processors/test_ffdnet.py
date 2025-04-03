@@ -126,7 +126,9 @@ def test_ffdnet(args):
   else:
     checkpoint = remove_dataparallel_wrapper(checkpoint)
     model = net
-  model.load_state_dict(checkpoint)
+  from ffdnet.compatibility import load_state_dict
+  # model.load_state_dict(checkpoint)  # old code
+  load_state_dict(model, checkpoint)  # new code
 
   # loop over all the images in the input folder
   for image_path in args.input:
