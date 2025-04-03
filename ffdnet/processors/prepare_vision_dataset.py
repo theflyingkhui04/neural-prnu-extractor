@@ -1,5 +1,5 @@
 import os
-from ffdnet.utils.dataset_utils import split_dataset_with_fixed_dimension
+from ffdnet.utils.dataset_utils import split_dataset_with_fixed_dimension, simple_split_dataset
 
 def configure_subparsers(subparsers):
   r"""Configure a new subparser for preparing the Vision dataset for FFDNet.

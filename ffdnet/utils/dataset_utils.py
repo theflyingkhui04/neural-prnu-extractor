@@ -91,6 +91,7 @@ def rearrange_dataset_prnu(dataset_folder: str, destination_folder: str, copy: b
         else:
           move(image_path, destination_folder + '/' + image_type + '/' + "_".join(name_splits))
 
+
 def simple_split_dataset(dataset_folder: str, destination_folder: str, train_frac: float = 0.70, copy: bool = True):
     """
     Split a dataset of images into training and validation sets without parsing VISION format.
