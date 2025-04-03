@@ -1,21 +1,3 @@
-""" dataset.py
-Module which contains dataset related functions
-
-Copyright (C) 2018, Matias Tassano <matias.tassano@parisdescartes.fr>
-
-This program is free software: you can use, modify and/or
-redistribute it under the terms of the GNU General Public
-License as published by the Free Software Foundation, either
-version 3 of the License, or (at your option) any later
-version. You should have received a copy of this license along
-this program. If not, see <http://www.gnu.org/licenses/>.
-
-Later authors:
-
-- Simone Alghisi (simone.alghisi-1@studenti.unitn.it)
-- Samuele Bortolotti (samuele.bortolotti@studenti.unitn.it)
-- Massimo Rizzoli (massimo.rizzoli@studenti.unitn.it)
-"""
 import os
 import os.path
 import random
@@ -74,7 +56,24 @@ def prepare_data(data_path,
     files.extend(glob.glob(os.path.join(data_path, tp)))
   files.sort()
 
-  traindbf = 'datasets/'+ dataset_file
+  # Đảm bảo đặt đúng đường dẫn và tên file
+    if "train" in data_path.lower():
+        h5_filename = 'train_gray.h5' if gray_mode else 'train_rgb.h5'
+    else:
+        h5_filename = 'val_gray.h5' if gray_mode else 'val_rgb.h5'
+  
+  # Nếu đường dẫn đầu ra là một thư mục
+    if os.path.isdir('datasets/' + dataset_file) or not dataset_file.endswith('.h5'):
+        os.makedirs('datasets/' + dataset_file, exist_ok=True)
+        traindbf = 'datasets/' + dataset_file + '/' + h5_filename
+    else:
+        # Nếu đã chỉ định tên file h5 đầy đủ
+        traindbf = 'datasets/' + dataset_file
+  
+  # Đảm bảo thư mục chứa tệp tồn tại
+    os.makedirs(os.path.dirname(traindbf), exist_ok=True)
+    
+    print(f"Creating H5 file at: {traindbf}")
 
   sample_num = 0
   i = 0

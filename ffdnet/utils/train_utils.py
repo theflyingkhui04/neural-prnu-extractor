@@ -289,7 +289,18 @@ def estimate_noise(image_list, method = Estimator.WIENER, wiener_kernel_size=(5,
   for i in range(n_images):
     image = np.asarray(image_list[i]).squeeze()
 
-    filtered = wiener(image, wiener_kernel_size)
+    # Di chuyển đoạn kiểm tra kích thước vào đây, sau khi đã có biến image
+    if len(image.shape) == 4:  # [batch, channels, height, width]
+        filtered = np.zeros_like(image)
+        for b in range(image.shape[0]):
+            for c in range(image.shape[1]):
+                filtered[b,c] = wiener(image[b,c], wiener_kernel_size)
+    elif len(image.shape) == 3:  # [channels, height, width]
+        filtered = np.zeros_like(image)
+        for c in range(image.shape[0]):
+            filtered[c] = wiener(image[c], wiener_kernel_size)
+    else:  # [height, width]
+        filtered = wiener(image, wiener_kernel_size)
 
     array_sum = np.sum(filtered)
     array_has_nan = np.isnan(array_sum)
