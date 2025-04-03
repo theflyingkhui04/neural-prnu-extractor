@@ -12,18 +12,22 @@ from ffdnet.utils.train_utils import load_dataset_and_dataloader, create_model, 
 
 # try to import the autocast command
 try:
-  from torch.cuda.amp import autocast
+    from torch.cuda.amp import autocast
 except ImportError:
-  print('torch.autocast is not supported in {}'.format(torch.__version__))
-  
-  # Định nghĩa một lớp DummyAutocast để thay thế
-  class DummyAutocast:
-    def __enter__(self):
-      pass
-    def __exit__(self, exc_type, exc_val, exc_tb):
-      pass
-
-  autocast = DummyAutocast  # Gán autocast bằng lớp DummyAutocast
+    print('torch.cuda.amp.autocast is not supported in {}'.format(torch.__version__))
+    
+    # Định nghĩa một lớp DummyAutocast để thay thế
+    class autocast:  # Định nghĩa như class thay vì hàm
+        def __init__(self, device_type=None, enabled=True, dtype=None):
+            self.device_type = device_type
+            self.enabled = enabled
+            self.dtype = dtype
+            
+        def __enter__(self):
+            pass
+            
+        def __exit__(self, exc_type, exc_val, exc_tb):
+            pass
 
 os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"

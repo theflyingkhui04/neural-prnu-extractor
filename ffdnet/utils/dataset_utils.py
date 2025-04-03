@@ -1,20 +1,3 @@
-""" dataset_utils.py
-
-Copyright (C) 2018, Matias Tassano <matias.tassano@parisdescartes.fr>
-
-This program is free software: you can use, modify and/or
-redistribute it under the terms of the GNU General Public
-License as published by the Free Software Foundation, either
-version 3 of the License, or (at your option) any later
-version. You should have received a copy of this license along
-this program. If not, see <http://www.gnu.org/licenses/>.
-
-Later authors:
-
-- Simone Alghisi (simone.alghisi-1@studenti.unitn.it)
-- Samuele Bortolotti (samuele.bortolotti@studenti.unitn.it)
-- Massimo Rizzoli (massimo.rizzoli@studenti.unitn.it)
-"""
 import os
 from pathlib import Path
 import random
@@ -107,3 +90,52 @@ def rearrange_dataset_prnu(dataset_folder: str, destination_folder: str, copy: b
           copyfile(image_path, destination_folder + '/' + image_type + '/' + "_".join(name_splits))
         else:
           move(image_path, destination_folder + '/' + image_type + '/' + "_".join(name_splits))
+
+def simple_split_dataset(dataset_folder: str, destination_folder: str, train_frac: float = 0.70, copy: bool = True):
+    """
+    Split a dataset of images into training and validation sets without parsing VISION format.
+    
+    Args:
+        dataset_folder: Source folder with images
+        destination_folder: Where to put train/val splits
+        train_frac: Fraction of data for training (0.0-1.0)
+        copy: Whether to copy (True) or move (False) files
+    """
+    print(f"Simple dataset splitter (for non-VISION format datasets)")
+    print(f"Source: {dataset_folder}")
+    print(f"Destination: {destination_folder}")
+    
+    # Create destination directories if they don't exist
+    os.makedirs(os.path.join(destination_folder, 'train'), exist_ok=True)
+    os.makedirs(os.path.join(destination_folder, 'val'), exist_ok=True)
+    
+    # Find all image files
+    all_files = []
+    for ext in ['jpg', 'jpeg', 'png', 'bmp', 'tif', 'tiff']:
+        for file_path in Path(dataset_folder).glob(f'**/*.{ext}'):
+            all_files.append(str(file_path))
+    
+    print(f"Found {len(all_files)} image files")
+    if len(all_files) == 0:
+        print("No image files found! Dataset may be in wrong format.")
+        return
+    
+    # Shuffle and split
+    random.shuffle(all_files)
+    split_idx = int(len(all_files) * train_frac)
+    train_files = all_files[:split_idx]
+    val_files = all_files[split_idx:]
+    
+    print(f"Splitting into {len(train_files)} training and {len(val_files)} validation files")
+    
+    # Copy/Move files
+    for files, target in [(train_files, 'train'), (val_files, 'val')]:
+        pbar = tqdm(files, desc=f"Processing {target}")
+        for f in pbar:
+            dst = os.path.join(destination_folder, target, os.path.basename(f))
+            if copy:
+                copyfile(f, dst)
+            else:
+                move(f, dst)
+    
+    print("Dataset splitting complete!")
