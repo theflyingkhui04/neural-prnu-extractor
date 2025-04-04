@@ -115,7 +115,7 @@ def train(args):
 
           # Evaluate models
           try:
-            with autocast(device_type='cuda'):
+            with autocast():
               pred = models(imgn, stdn_var)
               loss = compute_loss(criterion, pred, noise, imgn).cpu()
           except NameError:
@@ -128,7 +128,7 @@ def train(args):
             models.eval()
 
             try:
-              with autocast(device_type='cuda'):
+              with autocast():
                 pred = models(imgn, stdn_var)
             except NameError:
               pred = models(imgn, stdn_var)
