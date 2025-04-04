@@ -7,7 +7,7 @@ from torch.utils.tensorboard import SummaryWriter
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from tqdm import tqdm
 from ffdnet.utils.data_utils import batch_psnr, svd_orthogonalization, init_logger
-from ffdnet.utils.train_utils import load_dataset_and_dataloader, create_models, \
+from ffdnet.utils.train_utils import load_dataset_and_dataloader, create_model, \
 			init_loss, resume_training, create_input_variables, compute_loss, get_lr
 
 # try to import the autocast command
@@ -68,7 +68,7 @@ def train(args):
   logger = init_logger(args)
 
   # Create models
-  models = create_models(args)
+  models = create_model(args)
 
   # Define loss
   criterion = init_loss()
