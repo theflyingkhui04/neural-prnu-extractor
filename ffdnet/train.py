@@ -7,7 +7,7 @@ from torch.utils.tensorboard import SummaryWriter
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from tqdm import tqdm
 from ffdnet.utils.data_utils import batch_psnr, svd_orthogonalization, init_logger
-from ffdnet.utils.train_utils import load_dataset_and_dataloader, create_model, \
+from ffdnet.utils.train_utils import load_dataset_and_dataloader, create_models, \
 			init_loss, resume_training, create_input_variables, compute_loss, get_lr
 
 # try to import the autocast command
@@ -67,18 +67,18 @@ def train(args):
   writer = SummaryWriter(args.experiment_name)
   logger = init_logger(args)
 
-  # Create model
-  model = create_model(args)
+  # Create models
+  models = create_models(args)
 
   # Define loss
   criterion = init_loss()
   # Optimizer
-  optimizer = optim.Adam(model.parameters(), lr=args.lr)
+  optimizer = optim.Adam(models.parameters(), lr=args.lr)
   # Scheduler
   scheduler = ReduceLROnPlateau(optimizer, 'min', patience=40)
 
   # Resume training or start anew
-  training_params, val_params, start_epoch, args = resume_training(args, model, optimizer)
+  training_params, val_params, start_epoch, args = resume_training(args, models, optimizer)
   scheduler.num_bad_epochs = training_params['num_bad_epochs']
 
 	# Training
@@ -102,36 +102,36 @@ def train(args):
       with torch.set_grad_enabled(phase == 'train'):
         for i, data in enumerate(dataloaders[phase], 0):
           if phase == 'train':
-            model.train()
+            models.train()
             # try to set the gradient to None
-            model.zero_grad(set_to_none = True)
+            models.zero_grad(set_to_none = True)
             optimizer.zero_grad(set_to_none = True)
             params = training_params
           else:
-            model.eval()
+            models.eval()
             params = val_params
 
           img, imgn, stdn_var, noise = create_input_variables(args, data)
 
-          # Evaluate model
+          # Evaluate models
           try:
             with autocast(device_type='cuda'):
-              pred = model(imgn, stdn_var)
+              pred = models(imgn, stdn_var)
               loss = compute_loss(criterion, pred, noise, imgn).cpu()
           except NameError:
-            pred = model(imgn, stdn_var)
+            pred = models(imgn, stdn_var)
             loss = compute_loss(criterion, pred, noise, imgn).cpu()
 
           if phase == 'train':
             loss.backward()
             optimizer.step()
-            model.eval()
+            models.eval()
 
             try:
               with autocast(device_type='cuda'):
-                pred = model(imgn, stdn_var)
+                pred = models(imgn, stdn_var)
             except NameError:
-              pred = model(imgn, stdn_var)
+              pred = models(imgn, stdn_var)
 
           out = torch.clamp(imgn - pred, 0., 1.)
           psnr = batch_psnr(out, img, 1.)
@@ -140,7 +140,7 @@ def train(args):
             if phase == 'train':
               # Apply regularization by orthogonalizing filters
               if not training_params['no_orthog']:
-                model.apply(svd_orthogonalization)
+                models.apply(svd_orthogonalization)
 
             # Log the scalar values
             writer.add_scalar('loss on {} data'.format(phase), loss.item(), params['step'])
@@ -169,8 +169,8 @@ def train(args):
     # Log val images
     try:
       if epoch == 0:
-        # Log graph of the model
-        writer.add_graph(model, (imgn, stdn_var), )
+        # Log graph of the models
+        writer.add_graph(models, (imgn, stdn_var), )
         # Log validation images
         for idx in range(2):
           imclean = make_grid(img.data[idx].clamp(0., 1.), nrow=2, normalize=False, scale_each=False)
@@ -187,14 +187,14 @@ def train(args):
     except Exception as e:
       logger.error("Couldn't log results: {}".format(e))
 
-    # save model and checkpoint
+    # save models and checkpoint
     training_params['start_epoch'] = epoch + 1
-    torch.save(model.state_dict(), os.path.join(args.experiment_name, 'net.pth'))
+    torch.save(models.state_dict(), os.path.join(args.experiment_name, 'net.pth'))
     if val_params['best_loss'] >  metrics['loss']['val']:
       val_params['best_loss'] = metrics['loss']['val']
-      torch.save(model.state_dict(), os.path.join(args.experiment_name, 'best.pth'))
+      torch.save(models.state_dict(), os.path.join(args.experiment_name, 'best.pth'))
     save_dict = {
-      'state_dict': model.state_dict(),
+      'state_dict': models.state_dict(),
       'optimizer' : optimizer.state_dict(),
       'training_params': training_params,
       'val_params': val_params,
