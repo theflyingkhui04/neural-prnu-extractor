@@ -212,6 +212,7 @@ def create_input_variables(args, data):
     imgn = img + noise
     img = Variable(img.cuda())
     imgn = Variable(imgn.cuda())
+    
   elif args.filter == 'wiener':
     imgn = data
     img, stdn = estimate_noise(imgn, wiener_kernel_size = (5, 5))
@@ -220,7 +221,29 @@ def create_input_variables(args, data):
     stdn = Variable(stdn.cuda())
     img = Variable(img.cuda())
     imgn = Variable(imgn.cuda())
-    noise = torch.clamp(imgn - img, 0., 1.)
+    
+    # Đảm bảo noise được tính đúng cho cả ảnh RGB và grayscale
+    if img.shape != imgn.shape:
+        print(f"Phát hiện kích thước không khớp: img {img.shape}, imgn {imgn.shape}")
+        # Nếu không khớp số kênh (RGB vs grayscale)
+        if len(img.shape) == len(imgn.shape) and img.shape[0] == imgn.shape[0] and img.shape[2:] == imgn.shape[2:]:
+            # Chỉ khác số kênh, sao chép kênh grayscale ra RGB
+            if img.shape[1] == 1 and imgn.shape[1] == 3:
+                img = img.expand(-1, 3, -1, -1)  # Sao chép kênh grayscale thành 3 kênh
+                print("Đã mở rộng kênh grayscale thành RGB")
+            # Hoặc lấy trung bình của RGB thành grayscale
+            elif img.shape[1] == 3 and imgn.shape[1] == 1:
+                img = torch.mean(img, dim=1, keepdim=True)
+                print("Đã chuyển RGB thành grayscale")
+            noise = torch.clamp(imgn - img, 0., 1.)
+        else:
+            # Trường hợp không xử lý được, đặt noise = 0
+            print("Không thể xác định noise do kích thước không tương thích. Đặt noise = 0")
+            noise = torch.zeros_like(imgn)
+    else:
+        # Kích thước đúng, tính noise bình thường
+        noise = torch.clamp(imgn - img, 0., 1.)
+  
   stdn_var = Variable(torch.cuda.FloatTensor(stdn))
   noise = Variable(noise.cuda())
 
@@ -288,18 +311,18 @@ def estimate_noise(image_list, method = Estimator.WIENER, wiener_kernel_size=(5,
 
   for i in range(n_images):
     image = np.asarray(image_list[i]).squeeze()
-
-    # Di chuyển đoạn kiểm tra kích thước vào đây, sau khi đã có biến image
+    
+    # Xử lý dựa trên số chiều của ảnh
     if len(image.shape) == 4:  # [batch, channels, height, width]
         filtered = np.zeros_like(image)
         for b in range(image.shape[0]):
             for c in range(image.shape[1]):
                 filtered[b,c] = wiener(image[b,c], wiener_kernel_size)
-    elif len(image.shape) == 3:  # [channels, height, width]
+    elif len(image.shape) == 3:  # [channels, height, width] - RGB patch
         filtered = np.zeros_like(image)
         for c in range(image.shape[0]):
             filtered[c] = wiener(image[c], wiener_kernel_size)
-    else:  # [height, width]
+    else:  # [height, width] - grayscale
         filtered = wiener(image, wiener_kernel_size)
 
     array_sum = np.sum(filtered)
@@ -308,10 +331,21 @@ def estimate_noise(image_list, method = Estimator.WIENER, wiener_kernel_size=(5,
       filtered = image
 
     if not array_has_nan:
-      noise_sigma = estimate_sigma(image)
+      # Ước lượng nhiễu với tính toán đúng cho mỗi kênh màu
+      if len(image.shape) == 3 and image.shape[0] == 3:  # RGB
+          noise_sigma = 0
+          for c in range(image.shape[0]):
+              noise_sigma += estimate_sigma(image[c])
+          noise_sigma /= 3.0  # Lấy trung bình của các kênh
+      else:
+          noise_sigma = estimate_sigma(image)
     else:
       noise_sigma = 0
-    filtered = np.expand_dims(filtered, 0)
+      
+    # Đảm bảo đúng kích thước đầu ra
+    if len(filtered.shape) == 2:  # Grayscale được squeeze
+        filtered = np.expand_dims(filtered, 0)  # Thêm kênh grayscale
+        
     filtered_images[i] = filtered
     noises[i] = noise_sigma
 

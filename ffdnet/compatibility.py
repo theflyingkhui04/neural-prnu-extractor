@@ -1,12 +1,12 @@
 import torch
 
 def get_torch_version():
-    """Get PyTorch version as a tuple of integers"""
+    """Lấy phiên bản của PyTorch dưới dạng tuple số nguyên"""
     version_str = torch.__version__.split('+')[0]
     return tuple(map(int, version_str.split('.')))
 
 def set_memory_allocation(gpu_fraction):
-    """Set GPU memory allocation based on PyTorch version"""
+    """Thiết lập mức sử dụng bộ nhớ GPU"""
     if gpu_fraction < 1.0:
         try:
             torch.cuda.set_per_process_memory_fraction(gpu_fraction)
@@ -16,7 +16,7 @@ def set_memory_allocation(gpu_fraction):
             print(f"Current torch version: {torch.__version__}")
 
 def load_state_dict(model, state_dict):
-    """Handle loading state dict across different PyTorch versions"""
+    """Tải state_dict vào mô hình, xử lý lỗi khi có sự không tương thích"""
     try:
         model.load_state_dict(state_dict)
     except Exception as e:
@@ -27,3 +27,4 @@ def load_state_dict(model, state_dict):
             print("Warning: Model loaded with strict=False due to incompatible keys")
         else:
             raise e
+        
