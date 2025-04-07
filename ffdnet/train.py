@@ -73,7 +73,7 @@ def train(args):
   # Define loss
   criterion = init_loss()
   # Optimizer
-  optimizer = optim.Adam(models.parameters(), lr=args.lr)
+  optimizer = optim.Adam(models.parameters(), lr=0.01)
   # Scheduler
   scheduler = ReduceLROnPlateau(optimizer, 'min', patience=40)
 
